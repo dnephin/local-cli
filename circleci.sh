@@ -17,13 +17,13 @@ CLI_VERSION="0.0.4705-deba4df"
 
 # Pull `latest` tag from docker repo and write digest into the file
 pull_latest_image() {
-  latest_image=$(docker pull $PICARD_REPO | grep -o "sha256.*$")
+  local latest_image=$(docker pull $PICARD_REPO | grep -o "sha256.*$")
   echo $latest_image > $LATEST_DIGEST_FILE
 }
 
 # Write given digest into the file
 update_current_digest() {
-  version="$@"
+  local version="$@"
   echo $version > $CURRENT_DIGEST_FILE
 }
 
@@ -31,9 +31,9 @@ update_current_digest() {
 get_latest_digest() {
   if [ -e "$LATEST_DIGEST_FILE" ];
   then
-    echo $(cat $LATEST_DIGEST_FILE)
+    echo "$(cat "$LATEST_DIGEST_FILE")"
   else
-    echo $UNKNOWN_DIGEST
+    echo "$UNKNOWN_DIGEST"
   fi
 }
 
@@ -41,7 +41,7 @@ get_latest_digest() {
 get_current_digest() {
   if [ -e "$CURRENT_DIGEST_FILE" ];
   then
-    echo $(cat $CURRENT_DIGEST_FILE)
+    echo "$(cat "$CURRENT_DIGEST_FILE")"
   else
     echo $UNKNOWN_DIGEST
   fi
@@ -57,24 +57,15 @@ is_update_available() {
 
 # Printing version of this script
 print_cli_version() {
-  echo "Local CLI version:" $CLI_VERSION
-}
-
-update_picard_cli() {
-  cmd_prefix=""
-  if ! [[ -w $PICARD_CLI_FILE ]]; then
-    echo "[WARN] Not enough permissions to write to $PICARD_CLI_FILE, trying sudo..."
-    cmd_prefix="sudo "
-  fi
-  bash -c "$cmd_prefix curl -o $PICARD_CLI_FILE $PICARD_CLI_URL --fail --silent --show-error && $cmd_prefix chmod +x $PICARD_CLI_FILE"
+  echo "Local CLI version: $CLI_VERSION"
 }
 
 #
 # Main program
 #
-if [ ! -e $CIRCLECI_DIR ];
+if [ ! -e "$CIRCLECI_DIR" ];
 then
-  mkdir -p $CIRCLECI_DIR >/dev/null
+  mkdir -p "$CIRCLECI_DIR" >/dev/null
 fi
 
 case "${1-}" in
@@ -82,13 +73,13 @@ case "${1-}" in
   --image | -i )
     picard_image="$2"
     shift; shift;
-    echo "[WARN] Using circleci:" $picard_image
+    echo "[WARN] Using circleci: $picard_image"
     ;;
 
   --tag | -t )
     picard_image="$PICARD_REPO:$2"
     shift; shift;
-    echo "[WARN] Using circleci:" $picard_image
+    echo "[WARN] Using circleci: $picard_image"
 	;;
 
   --version )
@@ -108,7 +99,6 @@ if [[ ! ${picard_image-} ]]; then
   else
     # Otherwise pulling latest image in background
     pull_latest_image &>/dev/null &disown
-    echo
   fi
   picard_image="$PICARD_REPO@$current_digest"
 fi
@@ -134,11 +124,12 @@ if is_update_available; then
   echo "INFO: There's a newer version of the CircleCI build agent available. Run 'circleci update' to update."
 fi
 
-docker run -it --rm \
-       -e DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.23} \
+pwd="$(pwd)"
+exec docker run -it --rm \
+       -e "DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.23}" \
        -v /var/run/docker.sock:/var/run/docker.sock \
-       -v $(pwd):$(pwd) \
+       -v "$pwd:$pwd" \
        -v ~/.circleci/:/root/.circleci \
-       --workdir $(pwd) \
-       $picard_image \
+       --workdir "$pwd" \
+       "$picard_image" \
        circleci "${@-}"

@@ -2,9 +2,11 @@ workflows:
   version: 2
   main:
     jobs:
+      - shellcheck
       - build
       - publish:
           requires:
+            - shellcheck
             - build
           filters:
             branches:
@@ -13,6 +15,15 @@ workflows:
 
 version: 2
 jobs:
+  shellcheck:
+    docker:
+      - image: koalaman/shellcheck-alpine:stable
+    steps:
+      - checkout
+      - run:
+          name: "Shellcheck"
+          command: shellcheck circleci.sh
+
   build:
     docker:
       - image: cibuilds/snapcraft:stable
