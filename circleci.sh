@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -eu
 
 PICARD_REPO="circleci/picard"
 
@@ -77,7 +77,7 @@ then
   mkdir -p $CIRCLECI_DIR >/dev/null
 fi
 
-case $1 in
+case "${1-}" in
   # Option for development purpose only
   --image | -i )
     picard_image="$2"
@@ -97,7 +97,7 @@ case $1 in
 esac
 
 # Do not check for update if --image of --tag is specified (to avoid overriding :latest tag)
-if [[ ! $picard_image ]]; then
+if [[ ! ${picard_image-} ]]; then
   current_digest=$(get_current_digest)
   if [[ $current_digest == $UNKNOWN_DIGEST ]]; then
     # Receiving latest image of picard in case of there's no current digest stored
@@ -113,7 +113,7 @@ if [[ ! $picard_image ]]; then
   picard_image="$PICARD_REPO@$current_digest"
 fi
 
-case $1 in
+case "${1-}" in
   version )
     print_cli_version
     ;;
@@ -141,4 +141,4 @@ docker run -it --rm \
        -v ~/.circleci/:/root/.circleci \
        --workdir $(pwd) \
        $picard_image \
-       circleci "$@"
+       circleci "${@-}"
